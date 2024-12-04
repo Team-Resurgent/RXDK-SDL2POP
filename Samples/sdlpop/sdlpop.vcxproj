@@ -111,11 +111,11 @@
       <Message>Creating Xbox Image...</Message>
       <Command>"$(RXDK_LIBS)bin\patchSubsystem.exe" -i="$(OutDir)$(TargetFileName)" -s=0x000E
 "$(RXDK_LIBS)bin\imagebld.exe" /in:"$(OutDir)$(TargetFileName)" /out:"$(OutDir)$(TargetName).xbe" /nologo /stack:65536 /debug /nolibwarn
-MKDIR "$(OutDir)XISO"
-MKDIR "$(OutDir)XISO/data"
-XCOPY /i /e /s /y /f "$(ProjectDir)SDLPoP/data/*" "$(OutDir)XISO\data"
-COPY /Y "$(OutDir)$(TargetName).xbe" "$(OutDir)XISO\default.xbe"
-$(SolutionDir)Tools\extract-xiso.exe -c "$(OutDir)XISO" "$(OutDir)xiso.iso"</Command>
+MKDIR "$(OutDir)RXDK-SDLPOP"
+MKDIR "$(OutDir)RXDK-SDLPOP/data"
+XCOPY /i /e /s /y /f "$(ProjectDir)SDLPoP/data/*" "$(OutDir)RXDK-SDLPOP\data"
+COPY /Y "$(OutDir)$(TargetName).xbe" "$(OutDir)RXDK-SDLPOP\default.xbe"
+$(SolutionDir)Tools\extract-xiso.exe -c "$(OutDir)RXDK-SDLPOP" "$(OutDir)RXDK-SDLPOP.iso"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -154,11 +154,11 @@ $(SolutionDir)Tools\extract-xiso.exe -c "$(OutDir)XISO" "$(OutDir)xiso.iso"</Com
       <Message>1Creating Xbox Image...</Message>
       <Command>"$(RXDK_LIBS)bin\patchSubsystem.exe" -i="$(OutDir)$(TargetFileName)" -s=0x000E
 "$(RXDK_LIBS)bin\imagebld.exe" /in:"$(OutDir)$(TargetFileName)" /out:"$(OutDir)$(TargetName).xbe" /nologo /stack:65536 /debug /nolibwarn
-MKDIR "$(OutDir)XISO"
-MKDIR "$(OutDir)XISO/data"
-XCOPY /i /e /s /y /f "$(ProjectDir)SDLPoP/data/*" "$(OutDir)XISO\data"
-COPY /Y "$(OutDir)$(TargetName).xbe" "$(OutDir)XISO\default.xbe"
-$(SolutionDir)Tools\extract-xiso.exe -c "$(OutDir)XISO" "$(OutDir)xiso.iso"</Command>
+MKDIR "$(OutDir)RXDK-SDLPOP"
+MKDIR "$(OutDir)RXDK-SDLPOP/data"
+XCOPY /i /e /s /y /f "$(ProjectDir)SDLPoP/data/*" "$(OutDir)RXDK-SDLPOP\data"
+COPY /Y "$(OutDir)$(TargetName).xbe" "$(OutDir)RXDK-SDLPOP\default.xbe"
+$(SolutionDir)Tools\extract-xiso.exe -c "$(OutDir)RXDK-SDLPOP" "$(OutDir)RXDK-SDLPOP.iso"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup Label="ProjectConfigurations">
