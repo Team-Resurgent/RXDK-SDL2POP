@@ -1,0 +1,149 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Source Files\sdlpop">
+      <UniqueIdentifier>{8b961da5-2b2f-43d8-836a-b83e7b373829}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\printf">
+      <UniqueIdentifier>{05d358b3-d6e0-48e7-995d-d5101e614365}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\hacks">
+      <UniqueIdentifier>{b5e3e2c4-25e6-43c8-aeae-35e0e7f62819}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\hacks">
+      <UniqueIdentifier>{161e9497-8055-4fac-9d0d-d1f7fd454505}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\sdlpop">
+      <UniqueIdentifier>{cb6ed40d-36df-49c8-8f48-a9185a514de6}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="sdlpop.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SDLPoP\src\data.c">
+      <Filter>Source Files\sdlpop</Filter>
+    </ClCompile>
+    <ClCompile Include="SDLPoP\src\lighting.c">
+      <Filter>Source Files\sdlpop</Filter>
+    </ClCompile>
+    <ClCompile Include="SDLPoP\src\menu.c">
+      <Filter>Source Files\sdlpop</Filter>
+    </ClCompile>
+    <ClCompile Include="SDLPoP\src\midi.c">
+      <Filter>Source Files\sdlpop</Filter>
+    </ClCompile>
+    <ClCompile Include="SDLPoP\src\opl3.c">
+      <Filter>Source Files\sdlpop</Filter>
+    </ClCompile>
+    <ClCompile Include="SDLPoP\src\options.c">
+      <Filter>Source Files\sdlpop</Filter>
+    </ClCompile>
+    <ClCompile Include="SDLPoP\src\replay.c">
+      <Filter>Source Files\sdlpop</Filter>
+    </ClCompile>
+    <ClCompile Include="SDLPoP\src\screenshot.c">
+      <Filter>Source Files\sdlpop</Filter>
+    </ClCompile>
+    <ClCompile Include="SDLPoP\src\seg001.c">
+      <Filter>Source Files\sdlpop</Filter>
+    </ClCompile>
+    <ClCompile Include="SDLPoP\src\seg002.c">
+      <Filter>Source Files\sdlpop</Filter>
+    </ClCompile>
+    <ClCompile Include="SDLPoP\src\seg003.c">
+      <Filter>Source Files\sdlpop</Filter>
+    </ClCompile>
+    <ClCompile Include="SDLPoP\src\seg004.c">
+      <Filter>Source Files\sdlpop</Filter>
+    </ClCompile>
+    <ClCompile Include="SDLPoP\src\seg005.c">
+      <Filter>Source Files\sdlpop</Filter>
+    </ClCompile>
+    <ClCompile Include="SDLPoP\src\seg006.c">
+      <Filter>Source Files\sdlpop</Filter>
+    </ClCompile>
+    <ClCompile Include="SDLPoP\src\seg007.c">
+      <Filter>Source Files\sdlpop</Filter>
+    </ClCompile>
+    <ClCompile Include="SDLPoP\src\seg008.c">
+      <Filter>Source Files\sdlpop</Filter>
+    </ClCompile>
+    <ClCompile Include="SDLPoP\src\seg009.c">
+      <Filter>Source Files\sdlpop</Filter>
+    </ClCompile>
+    <ClCompile Include="SDLPoP\src\seqtbl.c">
+      <Filter>Source Files\sdlpop</Filter>
+    </ClCompile>
+    <ClCompile Include="SDLPoP\src\stb_vorbis.c">
+      <Filter>Source Files\sdlpop</Filter>
+    </ClCompile>
+    <ClCompile Include="SDLPoP\src\seg000.c">
+      <Filter>Source Files\sdlpop</Filter>
+    </ClCompile>
+    <ClCompile Include="printf\printf.c">
+      <Filter>Source Files\printf</Filter>
+    </ClCompile>
+    <ClCompile Include="hacks\strdup.c">
+      <Filter>Source Files\hacks</Filter>
+    </ClCompile>
+    <ClCompile Include="hacks\strnlen.c">
+      <Filter>Source Files\hacks</Filter>
+    </ClCompile>
+    <ClCompile Include="hacks\strcasecmp.c">
+      <Filter>Source Files\hacks</Filter>
+    </ClCompile>
+    <ClCompile Include="hacks\strtoimax.c">
+      <Filter>Source Files\hacks</Filter>
+    </ClCompile>
+    <ClCompile Include="hacks\alloca.c">
+      <Filter>Source Files\hacks</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="hacks\stdint.h">
+      <Filter>Header Files\hacks</Filter>
+    </ClInclude>
+    <ClInclude Include="hacks\stdbool.h">
+      <Filter>Header Files\hacks</Filter>
+    </ClInclude>
+    <ClInclude Include="hacks\windows.h">
+      <Filter>Header Files\hacks</Filter>
+    </ClInclude>
+    <ClInclude Include="hacks\inttypes.h">
+      <Filter>Header Files\hacks</Filter>
+    </ClInclude>
+    <ClInclude Include="SDLPoP\src\common.h">
+      <Filter>Header Files\sdlpop</Filter>
+    </ClInclude>
+    <ClInclude Include="SDLPoP\src\config.h">
+      <Filter>Header Files\sdlpop</Filter>
+    </ClInclude>
+    <ClInclude Include="SDLPoP\src\data.h">
+      <Filter>Header Files\sdlpop</Filter>
+    </ClInclude>
+    <ClInclude Include="SDLPoP\src\GPLv3.h">
+      <Filter>Header Files\sdlpop</Filter>
+    </ClInclude>
+    <ClInclude Include="SDLPoP\src\opl3.h">
+      <Filter>Header Files\sdlpop</Filter>
+    </ClInclude>
+    <ClInclude Include="printf\printf.h">
+      <Filter>Header Files\sdlpop</Filter>
+    </ClInclude>
+    <ClInclude Include="SDLPoP\src\proto.h">
+      <Filter>Header Files\sdlpop</Filter>
+    </ClInclude>
+    <ClInclude Include="SDLPoP\src\types.h">
+      <Filter>Header Files\sdlpop</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
