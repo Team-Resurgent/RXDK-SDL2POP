@@ -111,12 +111,10 @@
       <Message>Creating Xbox Image...</Message>
       <Command>"$(RXDK_LIBS)bin\patchSubsystem.exe" -i="$(OutDir)$(TargetFileName)" -s=0x000E
 "$(RXDK_LIBS)bin\imagebld.exe" /in:"$(OutDir)$(TargetFileName)" /out:"$(OutDir)$(TargetName).xbe" /nologo /stack:65536 /debug /nolibwarn
-MKDIR "$(OutDir)RXDK-SDLPOP"
-MKDIR "$(OutDir)RXDK-SDLPOP/data"
-XCOPY /i /e /s /y /f "$(ProjectDir)SDLPoP/data/*" "$(OutDir)RXDK-SDLPOP\data"
-COPY /Y "$(OutDir)$(TargetName).xbe" "$(OutDir)RXDK-SDLPOP\default.xbe"
-MKDIR "$(OutDir)XISO"
-"$(SolutionDir)Tools\xdvdfs.exe" pack "$(OutDir)RXDK-SDLPOP" "$(OutDir)XISO\$(ProjectName).iso"</Command>
+MKDIR "$(OutDir)BUILD"
+COPY /Y "$(OutDir)$(TargetName).xbe" "$(OutDir)BUILD\default.xbe"
+XCOPY /I /E /S /Y /F "$(ProjectDir)Media\*" "$(OutDir)BUILD"
+"$(RXDK_LIBS)bin\xdvdfs.exe" pack "$(OutDir)BUILD" "$(OutDir)$(ProjectName).iso"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -152,14 +150,13 @@ MKDIR "$(OutDir)XISO"
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
     <PostBuildEvent>
-      <Message>1Creating Xbox Image...</Message>
+      <Message>Creating Xbox Image...</Message>
       <Command>"$(RXDK_LIBS)bin\patchSubsystem.exe" -i="$(OutDir)$(TargetFileName)" -s=0x000E
 "$(RXDK_LIBS)bin\imagebld.exe" /in:"$(OutDir)$(TargetFileName)" /out:"$(OutDir)$(TargetName).xbe" /nologo /stack:65536 /debug /nolibwarn
-MKDIR "$(OutDir)RXDK-SDLPOP"
-MKDIR "$(OutDir)RXDK-SDLPOP/data"
-XCOPY /i /e /s /y /f "$(ProjectDir)SDLPoP/data/*" "$(OutDir)RXDK-SDLPOP\data"
-COPY /Y "$(OutDir)$(TargetName).xbe" "$(OutDir)RXDK-SDLPOP\default.xbe"
-$(SolutionDir)Tools\extract-xiso.exe -c "$(OutDir)RXDK-SDLPOP" "$(OutDir)RXDK-SDLPOP.iso"</Command>
+MKDIR "$(OutDir)BUILD"
+COPY /Y "$(OutDir)$(TargetName).xbe" "$(OutDir)BUILD\default.xbe"
+XCOPY /I /E /S /Y /F "$(ProjectDir)Media\*" "$(OutDir)BUILD"
+"$(RXDK_LIBS)bin\xdvdfs.exe" pack "$(OutDir)BUILD" "$(OutDir)$(ProjectName).iso"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup Label="ProjectConfigurations">
