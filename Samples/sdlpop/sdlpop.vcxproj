@@ -115,7 +115,8 @@ MKDIR "$(OutDir)RXDK-SDLPOP"
 MKDIR "$(OutDir)RXDK-SDLPOP/data"
 XCOPY /i /e /s /y /f "$(ProjectDir)SDLPoP/data/*" "$(OutDir)RXDK-SDLPOP\data"
 COPY /Y "$(OutDir)$(TargetName).xbe" "$(OutDir)RXDK-SDLPOP\default.xbe"
-$(SolutionDir)Tools\extract-xiso.exe -c "$(OutDir)RXDK-SDLPOP" "$(OutDir)RXDK-SDLPOP.iso"</Command>
+MKDIR "$(OutDir)XISO"
+"$(SolutionDir)Tools\xdvdfs.exe" pack "$(OutDir)RXDK-SDLPOP" "$(OutDir)XISO\$(ProjectName).iso"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
