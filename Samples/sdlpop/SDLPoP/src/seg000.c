@@ -2371,6 +2371,31 @@ void show_quotes() {
 const rect_type splash_text_1_rect = { 0, 0, 50, 320 };
 const rect_type splash_text_2_rect = { 50, 0, 200, 320 };
 
+#ifdef XBOX
+const char* splash_text_1 = "RXDK-SDLPoP " SDLPOP_VERSION;
+const char* splash_text_2 =
+#ifdef USE_REPLAY
+"To record replays, press Ctrl+Tab in-game.\n"
+"To view replays, press Tab on the title screen.\n"
+"\n"
+#endif
+"START: Pause Game, Open Menu.\n"
+"X: Walk, Grab Ledge.\n"
+"Y/UP: Jump, Block Attack.\n"
+"A/DOWN: Duck, Put Away Sword.\n"
+"\n"
+"\n"
+"\n"
+"For more information and updates, visit:\n"
+"https://github.com/Team-Resurgent/RXDK-SDL2POP\n"
+"\n"
+"\n"
+"\n"
+
+"Press any button to continue...";
+
+#else
+
 const char* splash_text_1 = "SDLPoP " SDLPOP_VERSION;
 const char* splash_text_2 =
 "In-game, Esc opens a settings/quicksave menu.\n"
@@ -2388,11 +2413,13 @@ const char* splash_text_2 =
 "\n"
 "Press any key to continue...";
 
+#endif
+
 void show_splash() {
 	if (!enable_info_screen || start_level >= 0) return;
 	current_target_surface = onscreen_surface_;
 	draw_rect(&screen_rect, color_0_black);
-	show_text_with_color(&splash_text_1_rect, halign_center, valign_middle, splash_text_1, color_15_brightwhite);
+	show_text_with_color(&splash_text_1_rect, halign_center, valign_middle, splash_text_1, color_10_brightgreen);
 	show_text_with_color(&splash_text_2_rect, halign_center, valign_top, splash_text_2, color_7_lightgray);
 
 #ifdef USE_TEXT // Don't wait for a keypress if there is no text for the user to read.

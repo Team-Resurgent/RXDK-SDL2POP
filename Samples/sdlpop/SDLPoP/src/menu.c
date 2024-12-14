@@ -84,8 +84,13 @@ pause_menu_item_type pause_menu_items[] = {
 		// TODO: Add a cheats menu, where you can choose a cheat from a list?
 		/*{.id = PAUSE_MENU_CHEATS,        .text = "CHEATS", .required = &cheats_enabled},*/
 #ifdef USE_QUICKSAVE // TODO: If quicksave is disabled, show regular save/load instead?
+#ifdef __XBOX__
+		{.id = PAUSE_MENU_SAVE_GAME,     .text = "QUICKSAVE"},
+		{.id = PAUSE_MENU_LOAD_GAME,     .text = "QUICKLOAD"},
+#else
 		{.id = PAUSE_MENU_SAVE_GAME,     .text = "QUICKSAVE (F6)"},
 		{.id = PAUSE_MENU_LOAD_GAME,     .text = "QUICKLOAD (F9)"},
+#endif
 #endif
 		{.id = PAUSE_MENU_RESTART_LEVEL, .text = "RESTART LEVEL"},
 		{.id = PAUSE_MENU_SETTINGS,      .text = "SETTINGS"},
@@ -1213,7 +1218,12 @@ void pause_menu_clicked(pause_menu_item_type* item) {
 		break;
 	case PAUSE_MENU_QUIT_GAME:
 		current_dialog_box = DIALOG_CONFIRM_QUIT;
+
+#ifdef XBOX
+		current_dialog_text = "Quit RXDK-SDLPoP?";
+#else
 		current_dialog_text = "Quit SDLPoP?";
+#endif
 		break;
 	case SETTINGS_MENU_GENERAL:
 	case SETTINGS_MENU_GAMEPLAY:
@@ -2237,6 +2247,7 @@ void process_ingame_settings_mod_managed(SDL_RWops* rw, rw_process_func_type pro
 
 // CRC-32 implementation adapted from:
 // https://web.archive.org/web/20190108202303/http://www.hackersdelight.org/hdcodetxt/crc.c.txt
+#ifndef XBOX // CRC-32 checks are not needed on Xbox
 unsigned int crc32c(unsigned char* message, size_t size) {
 	int i, j;
 	unsigned int byte, crc, mask;
@@ -2289,12 +2300,15 @@ void calculate_exe_crc(void) {
 		}
 	}
 }
+#endif
 
 void save_ingame_settings(void) {
 	SDL_RWops* rw = SDL_RWFromFile(locate_save_file("SDLPoP.cfg"), "wb");
 	if (rw != NULL) {
+#ifndef XBOX
 		calculate_exe_crc();
 		SDL_RWwrite(rw, &exe_crc, sizeof(exe_crc), 1);
+#endif
 		byte levelset_name_length = (byte)strnlen(levelset_name, UINT8_MAX);
 		SDL_RWwrite(rw, &levelset_name_length, sizeof(levelset_name_length), 1);
 		SDL_RWwrite(rw, levelset_name, levelset_name_length, 1);
@@ -2305,43 +2319,63 @@ void save_ingame_settings(void) {
 }
 
 void load_ingame_settings(void) {
-#ifndef XBOX
-	// We want the SDLPoP.cfg file (in-game menu settings) to override the SDLPoP.ini file,
-	// but ONLY if the .ini file wasn't modified since the last time the .cfg file was saved!
-	struct stat st_ini, st_cfg;
 	const char* cfg_filename = locate_file("SDLPoP.cfg");
+
+#ifndef XBOX
+	// Non-Xbox: Compare timestamps of SDLPoP.cfg and SDLPoP.ini
+	struct stat st_ini, st_cfg;
 	const char* ini_filename = locate_file("SDLPoP.ini");
+
 	if (stat(cfg_filename, &st_cfg) == 0 && stat(ini_filename, &st_ini) == 0) {
 		if (st_ini.st_mtime > st_cfg.st_mtime) {
-			// SDLPoP.ini is newer than SDLPoP.cfg, so just go with the .ini configuration
+			// SDLPoP.ini is newer than SDLPoP.cfg, use .ini configuration
 			return;
 		}
 	}
-	// If there is a SDLPoP.cfg file, let it override the settings
+
+	// Attempt to open SDLPoP.cfg
 	SDL_RWops* rw = SDL_RWFromFile(cfg_filename, "rb");
 	if (rw != NULL) {
-		// SDLPoP.cfg should be invalidated if the prince executable changes.
-		// This allows us not to worry about future and backward compatibility of this file.
-		calculate_exe_crc();
+		calculate_exe_crc(); // Ensure CRC matches
 		dword expected_crc = 0;
-		SDL_RWread(rw, &expected_crc, sizeof(expected_crc), 1);
-		//		printf("CRC-32: exe = %x, expected = %x\n", exe_crc, expected_crc);
-		if (exe_crc == expected_crc) {
+
+		if (SDL_RWread(rw, &expected_crc, sizeof(expected_crc), 1) == 1 &&
+			exe_crc == expected_crc) {
 			byte cfg_levelset_name_length;
 			char cfg_levelset_name[256] = { 0 };
-			SDL_RWread(rw, &cfg_levelset_name_length, sizeof(cfg_levelset_name_length), 1);
-			SDL_RWread(rw, cfg_levelset_name, cfg_levelset_name_length, 1);
-			//			printf("%s, %s\n", cfg_levelset_name, levelset_name);
-			process_ingame_settings_user_managed(rw, process_rw_read); // Load the settings.
-			// For mod-managed settings: discard the CFG settings when switching to different mod.
-			if (strncmp(levelset_name, cfg_levelset_name, 256) == 0) {
-				process_ingame_settings_mod_managed(rw, process_rw_read);
+
+			if (SDL_RWread(rw, &cfg_levelset_name_length, sizeof(cfg_levelset_name_length), 1) == 1 &&
+				SDL_RWread(rw, cfg_levelset_name, cfg_levelset_name_length, 1) == cfg_levelset_name_length) {
+				process_ingame_settings_user_managed(rw, process_rw_read); // Load user-managed settings
+
+				// Load mod-managed settings if the levelset matches
+				if (strncmp(levelset_name, cfg_levelset_name, sizeof(cfg_levelset_name)) == 0) {
+					process_ingame_settings_mod_managed(rw, process_rw_read);
+				}
 			}
 		}
+
 		SDL_RWclose(rw);
 	}
 #else
-	const char* cfg_filename = locate_file("SDLPoP.cfg");
+	// Xbox: Load settings directly from SDLPoP.cfg
+	SDL_RWops* rw = SDL_RWFromFile(cfg_filename, "rb");
+	if (rw != NULL) {
+		byte levelset_name_length;
+		char cfg_levelset_name[256] = { 0 };
+
+		if (SDL_RWread(rw, &levelset_name_length, sizeof(levelset_name_length), 1) == 1 &&
+			SDL_RWread(rw, cfg_levelset_name, levelset_name_length, 1) == levelset_name_length) {
+			process_ingame_settings_user_managed(rw, process_rw_read); // Load user-managed settings
+
+			// Load mod-managed settings if the levelset matches
+			if (strncmp(levelset_name, cfg_levelset_name, sizeof(cfg_levelset_name)) == 0) {
+				process_ingame_settings_mod_managed(rw, process_rw_read);
+			}
+		}
+
+		SDL_RWclose(rw);
+	}
 #endif
 }
 

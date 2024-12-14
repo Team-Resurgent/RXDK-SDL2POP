@@ -116,24 +116,38 @@ const char* find_first_file_match(char* dst, int size, char* format, const char*
 }
 
 const char* locate_save_file_(const char* filename, char* dst, int size) {
-	find_exe_dir();
-#if defined WIN32 || _WIN32 || WIN64 || _WIN64
-	snprintf_check(dst, size, "%s/%s", exe_dir, filename);
+#ifdef XBOX
+	// Xbox-specific save path handling
+	// Save files go to the popSavePath directory by default
+	snprintf(dst, size, "%s\\%s", settingsPath, filename);
+	return dst;
 #else
-	find_home_dir();
-	find_share_dir();
+	find_exe_dir(); // Ensure exe_dir is initialized on non-Xbox platforms
+
+#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
+	// Save files to the executable directory for Windows
+	snprintf(dst, size, "%s/%s", exe_dir, filename);
+#else
+	find_home_dir();  // Initialize home_dir
+	find_share_dir(); // Initialize share_dir
+
+	// List of directories to check for writable access
 	char* dirs[3] = { home_dir, share_dir, exe_dir };
 	for (int i = 0; i < 3; i++) {
-		struct stat path_stat;
-		int result = stat(dirs[i], &path_stat);
-		if (result == 0 && S_ISDIR(path_stat.st_mode) && access(dirs[i], W_OK) == 0) {
-			snprintf_check(dst, size, "%s/%s", dirs[i], filename);
-			break;
+		if (dirs[i] != NULL) {
+			struct stat path_stat;
+			int result = stat(dirs[i], &path_stat);
+			if (result == 0 && S_ISDIR(path_stat.st_mode) && access(dirs[i], W_OK) == 0) {
+				snprintf(dst, size, "%s/%s", dirs[i], filename);
+				break;
+			}
 		}
 	}
 #endif
 	return (const char*)dst;
+#endif
 }
+
 const char* locate_file_(const char* filename, char* path_buffer, int buffer_size) {
 #ifdef XBOX
 	//Replace '/' with '\\' for xbox compatibility
