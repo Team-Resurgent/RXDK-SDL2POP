@@ -75,6 +75,9 @@ typedef struct GamePad
 	// Flags for whether game pad was just inserted or removed
 	BOOL       bInserted;
 	BOOL       bRemoved;
+
+	// Time to stop the rumble motors
+	Uint32     rumble_end_time; // Added field
 } XBGAMEPAD;
 
 // Global instance of XInput polling parameters
@@ -168,6 +171,7 @@ VOID XBInput_RefreshDeviceList(XBGAMEPAD* pGamepads, int i)
 static int
 XBOX_JoystickInit(void)
 {
+	SDL_Log("Initializing XBOX Joystick driver with Rumble support \n");
 	return 0;
 }
 
@@ -185,7 +189,7 @@ XBOX_JoystickDetect(void)
 static const char*
 XBOX_JoystickGetDeviceName(int device_index)
 {
-	return("XBOX Gamepad Plugin");
+	return("XBOX Gamepad Plugin\n");
 }
 
 static int
@@ -211,61 +215,144 @@ XBOX_JoystickGetDeviceInstanceID(int device_index)
 static int
 XBOX_JoystickOpen(SDL_Joystick* joystick, int device_index)
 {
-	DWORD b = 0;
 	DWORD dwDeviceMask;
 
-	if (!g_bDevicesInitialized)
+	if (!g_bDevicesInitialized) {
 		XInitDevices(0, NULL);
-
-	g_bDevicesInitialized = TRUE;
+		g_bDevicesInitialized = TRUE;
+	}
 
 	dwDeviceMask = XGetDevices(XDEVICE_TYPE_GAMEPAD);
 
-	joystick->hwdata = (struct joystick_hwdata*)malloc(sizeof(*joystick->hwdata));
+	// Allocate joystick hardware data if not already allocated
+	if (!joystick->hwdata) {
+		joystick->hwdata = (struct joystick_hwdata*)malloc(sizeof(*joystick->hwdata));
+		if (!joystick->hwdata) {
+			SDL_Log("XBOX_JoystickOpen: Failed to allocate hardware data.\n");
+			return -1;
+		}
+		ZeroMemory(joystick->hwdata, sizeof(*joystick->hwdata));
+	}
 
+	// Set joystick properties
 	joystick->nbuttons = MAX_BUTTONS;
 	joystick->naxes = MAX_AXES;
 	joystick->nhats = MAX_HATS;
 	joystick->is_game_controller = SDL_TRUE;
 	joystick->name = "Xbox SDL Gamepad V0.02";
 
-	// Set the idex (can we ditch the hwdata index and just use instance_id???)
+	// Store index
 	joystick->hwdata->index = joystick->instance_id = device_index;
 
-	ZeroMemory(&g_InputStates[joystick->hwdata->index], sizeof(XINPUT_STATE));
-	ZeroMemory(&joystick->hwdata->pGamepad, sizeof(XBGAMEPAD));
-	if (dwDeviceMask & (1 << joystick->hwdata->index))
-	{
-		// Get a handle to the device
+	// Check if the device is already open
+	if (g_Gamepads[joystick->hwdata->index].hDevice != NULL) {
+		SDL_Log("XBOX_JoystickOpen: Device %d already open. Reinitializing rumble.\n", joystick->hwdata->index);
+
+		// Reuse the existing device handle
+		joystick->hwdata->pGamepad.hDevice = g_Gamepads[joystick->hwdata->index].hDevice;
+
+		// Reinitialize rumble motors to zero
+		ZeroMemory(&joystick->hwdata->pGamepad.Feedback, sizeof(XINPUT_FEEDBACK));
+		joystick->hwdata->pGamepad.Feedback.Header.dwStatus = ERROR_IO_PENDING;
+		joystick->hwdata->pGamepad.Feedback.Rumble.wLeftMotorSpeed = 0;
+		joystick->hwdata->pGamepad.Feedback.Rumble.wRightMotorSpeed = 0;
+
+		if (XInputSetState(joystick->hwdata->pGamepad.hDevice, &joystick->hwdata->pGamepad.Feedback) != ERROR_IO_PENDING) {
+			SDL_Log("XBOX_JoystickOpen: Failed to initialize rumble motors for gamepad %d\n", joystick->hwdata->index);
+		}
+		else {
+			SDL_Log("XBOX_JoystickOpen: Rumble motors initialized successfully for gamepad %d\n", joystick->hwdata->index);
+		}
+
+		return 0; // Skip opening the device again
+	}
+
+	// Check if device exists
+	if (dwDeviceMask & (1 << joystick->hwdata->index)) {
 		joystick->hwdata->pGamepad.hDevice = XInputOpen(XDEVICE_TYPE_GAMEPAD, joystick->hwdata->index,
 			XDEVICE_NO_SLOT, &g_PollingParameters);
 
-		if (joystick->hwdata->pGamepad.hDevice)
-		{
-			// Store capabilities of the device
-			XInputGetCapabilities(joystick->hwdata->pGamepad.hDevice, &joystick->hwdata->pGamepad.caps);
+		if (joystick->hwdata->pGamepad.hDevice) {
+			SDL_Log("XInputOpen succeeded for device %d\n", joystick->hwdata->index);
 
-			// Initialize last pressed buttons
-			XInputGetState(joystick->hwdata->pGamepad.hDevice, &g_InputStates[joystick->hwdata->index]);
+			// Save the device handle to the global array
+			g_Gamepads[joystick->hwdata->index].hDevice = joystick->hwdata->pGamepad.hDevice;
 
-			joystick->hwdata->pGamepad.wLastButtons = g_InputStates[joystick->hwdata->index].Gamepad.wButtons;
+			// Retrieve capabilities
+			if (XInputGetCapabilities(joystick->hwdata->pGamepad.hDevice, &joystick->hwdata->pGamepad.caps) == ERROR_SUCCESS) {
+				SDL_Log("XBOX_JoystickOpen: Device capabilities retrieved successfully.\n");
+			}
+			else {
+				SDL_Log("XBOX_JoystickOpen: Failed to retrieve device capabilities.\n");
+				XInputClose(joystick->hwdata->pGamepad.hDevice);
+				joystick->hwdata->pGamepad.hDevice = NULL;
+				return -1;
+			}
 
-			for (b = 0; b < 8; b++)
-			{
-				joystick->hwdata->pGamepad.bLastAnalogButtons[b] =
-					// Turn the 8-bit polled value into a boolean value
-					(g_InputStates[joystick->hwdata->index].Gamepad.bAnalogButtons[b] > XINPUT_GAMEPAD_MAX_CROSSTALK);
+			// Initialize rumble motors to zero
+			ZeroMemory(&joystick->hwdata->pGamepad.Feedback, sizeof(XINPUT_FEEDBACK));
+			joystick->hwdata->pGamepad.Feedback.Header.dwStatus = ERROR_IO_PENDING;
+			joystick->hwdata->pGamepad.Feedback.Rumble.wLeftMotorSpeed = 0;
+			joystick->hwdata->pGamepad.Feedback.Rumble.wRightMotorSpeed = 0;
+
+			if (XInputSetState(joystick->hwdata->pGamepad.hDevice, &joystick->hwdata->pGamepad.Feedback) != ERROR_IO_PENDING) {
+				SDL_Log("XBOX_JoystickOpen: Failed to initialize rumble motors for gamepad %d\n", joystick->hwdata->index);
+			}
+			else {
+				SDL_Log("XBOX_JoystickOpen: Rumble motors initialized successfully for gamepad %d\n", joystick->hwdata->index);
 			}
 		}
+		else {
+			SDL_Log("XBOX_JoystickOpen: Failed to open gamepad device %d\n", joystick->hwdata->index);
+			return -1;
+		}
+	}
+	else {
+		SDL_Log("XBOX_JoystickOpen: Gamepad %d not found.\n", joystick->hwdata->index);
+		return -1;
 	}
 
+	SDL_Log("XBOX_JoystickOpen: Gamepad %d opened successfully.\n", joystick->hwdata->index);
 	return 0;
 }
 
 static int
 XBOX_JoystickRumble(SDL_Joystick* joystick, Uint16 low_frequency_rumble, Uint16 high_frequency_rumble, Uint32 duration_ms)
 {
-	return SDL_Unsupported();
+	if (!joystick || !joystick->hwdata) {
+		SDL_Log("XBOX_JoystickRumble: Invalid joystick or hardware data.\n");
+		return -1;
+	}
+
+	if (!joystick->hwdata->pGamepad.hDevice) {
+		SDL_Log("XBOX_JoystickRumble: Device handle is NULL.\n");
+		return -1;
+	}
+
+	SDL_Log("XBOX_JoystickRumble: Starting rumble...\n");
+
+	// Static/global feedback structure
+	static XINPUT_FEEDBACK feedback;
+	ZeroMemory(&feedback, sizeof(XINPUT_FEEDBACK));
+
+	// Set rumble motor speeds
+	feedback.Rumble.wLeftMotorSpeed = low_frequency_rumble;
+	feedback.Rumble.wRightMotorSpeed = high_frequency_rumble;
+
+	// Send the rumble command
+	DWORD result = XInputSetState(joystick->hwdata->pGamepad.hDevice, &feedback);
+	if (result != ERROR_SUCCESS && result != ERROR_IO_PENDING) {
+		SDL_Log("XBOX_JoystickRumble: XInputSetState failed with error %lu.\n", result);
+		return -1;
+	}
+
+	// Log success
+	SDL_Log("XBOX_JoystickRumble: Rumble command sent successfully.\n");
+
+	// Set the time to stop the rumble in joystick->hwdata
+	joystick->hwdata->pGamepad.rumble_end_time = SDL_GetTicks() + duration_ms;
+
+	return 0;
 }
 
 static void
@@ -297,6 +384,24 @@ XBOX_JoystickUpdate(SDL_Joystick* joystick)
 
 	// Copy gamepad to local structure
 	memcpy(&joystick->hwdata->pGamepad, &g_InputStates[joystick->hwdata->index].Gamepad, sizeof(XINPUT_GAMEPAD));
+
+	// Handle Rumble
+	Uint32 current_time = SDL_GetTicks();
+
+	// Check if rumble should stop
+	if (joystick->hwdata->pGamepad.rumble_end_time > 0 && current_time >= joystick->hwdata->pGamepad.rumble_end_time) {
+		SDL_Log("XBOX_JoystickUpdate: Stopping rumble motors...\n");
+
+		static XINPUT_FEEDBACK feedback;
+		ZeroMemory(&feedback, sizeof(XINPUT_FEEDBACK));
+		feedback.Rumble.wLeftMotorSpeed = 0;
+		feedback.Rumble.wRightMotorSpeed = 0;
+
+		XInputSetState(joystick->hwdata->pGamepad.hDevice, &feedback);
+
+		joystick->hwdata->pGamepad.rumble_end_time = 0; // Reset the rumble timer
+		SDL_Log("XBOX_JoystickUpdate: Rumble motors stopped.\n");
+	}
 
 	// Put Xbox device input for the gamepad into our custom format
 	fX1 = (joystick->hwdata->pGamepad.sThumbLX + 0.5f) / 32767.5f;
