@@ -123,47 +123,66 @@ VOID XBInput_RefreshDeviceList(XBGAMEPAD* pGamepads, int i)
 {
 	DWORD dwInsertions, dwRemovals, b;
 
+	// Get device changes
 	XGetDeviceChanges(XDEVICE_TYPE_GAMEPAD, &dwInsertions, &dwRemovals);
 
-	// Handle removed devices.
+	// Handle removed devices
 	pGamepads->bRemoved = (dwRemovals & (1 << i)) ? TRUE : FALSE;
+
 	if (pGamepads->bRemoved)
 	{
-		// If the controller was removed after XGetDeviceChanges but before
-		// XInputOpen, the device handle will be NULL
-		if (pGamepads->hDevice)
+		// Close the handle if the device was previously open
+		if (pGamepads->hDevice) {
 			XInputClose(pGamepads->hDevice);
+			SDL_Log("Controller %d Disconnected.\n", i + 1); // Report 1-based index
+		}
+
 		pGamepads->hDevice = NULL;
 
+		// Stop rumble
 		pGamepads->Feedback.Rumble.wLeftMotorSpeed = 0;
 		pGamepads->Feedback.Rumble.wRightMotorSpeed = 0;
 	}
 
 	// Handle inserted devices
 	pGamepads->bInserted = (dwInsertions & (1 << i)) ? TRUE : FALSE;
+
 	if (pGamepads->bInserted)
 	{
-		// TCR C6-2 Device Types
-		pGamepads->hDevice = XInputOpen(XDEVICE_TYPE_GAMEPAD, i,
-			XDEVICE_NO_SLOT, &g_PollingParameters);
+		SDL_Log("Controller %d Inserted.\n", i + 1); // Report 1-based index
 
-		// if the controller is removed after XGetDeviceChanges but before
-		// XInputOpen, the device handle will be NULL
+		// Open the controller handle
+		pGamepads->hDevice = XInputOpen(XDEVICE_TYPE_GAMEPAD, i, XDEVICE_NO_SLOT, &g_PollingParameters);
+
 		if (pGamepads->hDevice)
 		{
-			XInputGetCapabilities(pGamepads->hDevice, &pGamepads->caps);
+			// Retrieve controller capabilities
+			if (XInputGetCapabilities(pGamepads->hDevice, &pGamepads->caps) == ERROR_SUCCESS) {
+				SDL_Log("Controller %d Successfully Opened.\n", i + 1);
+			}
+			else {
+				SDL_Log("Controller %d Failed to Retrieve Capabilities.\n", i + 1);
+				XInputClose(pGamepads->hDevice);
+				pGamepads->hDevice = NULL;
+				return;
+			}
 
 			// Initialize last pressed buttons
-			XInputGetState(pGamepads->hDevice, &g_InputStates[i]);
+			if (XInputGetState(pGamepads->hDevice, &g_InputStates[i]) == ERROR_SUCCESS) {
+				pGamepads->wLastButtons = g_InputStates[i].Gamepad.wButtons;
 
-			pGamepads->wLastButtons = g_InputStates[i].Gamepad.wButtons;
-
-			for (b = 0; b < 8; b++)
-			{
-				pGamepads->bLastAnalogButtons[b] =
-					// Turn the 8-bit polled value into a boolean value
-					(g_InputStates[i].Gamepad.bAnalogButtons[b] > XINPUT_GAMEPAD_MAX_CROSSTALK);
+				for (b = 0; b < 8; b++) {
+					pGamepads->bLastAnalogButtons[b] =
+						(g_InputStates[i].Gamepad.bAnalogButtons[b] > XINPUT_GAMEPAD_MAX_CROSSTALK);
+				}
 			}
+			else {
+				SDL_Log("Controller %d Failed to Get Initial State.\n", i + 1);
+			}
+		}
+		else
+		{
+			SDL_Log("Controller %d Failed to Open.\n", i + 1);
 		}
 	}
 }
@@ -212,27 +231,60 @@ XBOX_JoystickGetDeviceInstanceID(int device_index)
 	return -1;
 }
 
-static int
-XBOX_JoystickOpen(SDL_Joystick* joystick, int device_index)
+// Global array to track open devices
+static BOOL g_DeviceOpen[4] = { FALSE, FALSE, FALSE, FALSE };
+
+static int XBOX_JoystickOpen(SDL_Joystick* joystick, int device_index)
 {
 	DWORD dwDeviceMask;
 
+	// Initialize devices only once
 	if (!g_bDevicesInitialized) {
-		XInitDevices(0, NULL);
+		XDEVICE_PREALLOC_TYPE deviceTypes[] = {
+			{XDEVICE_TYPE_GAMEPAD, 4}
+		};
+		XInitDevices(sizeof(deviceTypes) / sizeof(XDEVICE_PREALLOC_TYPE), deviceTypes);
 		g_bDevicesInitialized = TRUE;
 	}
 
+	// Get the connected devices mask
 	dwDeviceMask = XGetDevices(XDEVICE_TYPE_GAMEPAD);
 
-	// Allocate joystick hardware data if not already allocated
-	if (!joystick->hwdata) {
-		joystick->hwdata = (struct joystick_hwdata*)malloc(sizeof(*joystick->hwdata));
-		if (!joystick->hwdata) {
-			SDL_Log("XBOX_JoystickOpen: Failed to allocate hardware data.\n");
-			return -1;
+	// Log the state of all controllers
+	for (int i = 0; i < 4; i++) {
+		if (dwDeviceMask & (1 << i)) {
+			SDL_Log("XBOX_JoystickOpen: Controller %d connected.\n", i + 1);
 		}
-		ZeroMemory(joystick->hwdata, sizeof(*joystick->hwdata));
+		else {
+			SDL_Log("XBOX_JoystickOpen: Controller %d not connected.\n", i + 1);
+		}
 	}
+
+	// Validate device index
+	if (device_index < 0 || device_index >= 4) {
+		SDL_Log("XBOX_JoystickOpen: Invalid device index %d\n", device_index + 1);
+		return -1;
+	}
+
+	// Check if device is already open
+	if (g_DeviceOpen[device_index]) {
+		SDL_Log("XBOX_JoystickOpen: Controller %d already open. Skipping reinitialization.\n", device_index + 1);
+		joystick->hwdata = &g_Gamepads[device_index];
+		return 0;
+	}
+
+	if (!(dwDeviceMask & (1 << device_index))) {
+		SDL_Log("XBOX_JoystickOpen: Controller %d not connected.\n", device_index + 1);
+		return -1;
+	}
+
+	// Allocate hardware data for the joystick
+	joystick->hwdata = (struct joystick_hwdata*)malloc(sizeof(*joystick->hwdata));
+	if (!joystick->hwdata) {
+		SDL_Log("XBOX_JoystickOpen: Failed to allocate hardware data for Controller %d.\n", device_index + 1);
+		return -1;
+	}
+	ZeroMemory(joystick->hwdata, sizeof(*joystick->hwdata));
 
 	// Set joystick properties
 	joystick->nbuttons = MAX_BUTTONS;
@@ -240,79 +292,33 @@ XBOX_JoystickOpen(SDL_Joystick* joystick, int device_index)
 	joystick->nhats = MAX_HATS;
 	joystick->is_game_controller = SDL_TRUE;
 	joystick->name = "Xbox SDL Gamepad V0.02";
+	joystick->hwdata->index = device_index;
 
-	// Store index
-	joystick->hwdata->index = joystick->instance_id = device_index;
-
-	// Check if the device is already open
-	if (g_Gamepads[joystick->hwdata->index].hDevice != NULL) {
-		SDL_Log("XBOX_JoystickOpen: Device %d already open. Reinitializing rumble.\n", joystick->hwdata->index);
-
-		// Reuse the existing device handle
-		joystick->hwdata->pGamepad.hDevice = g_Gamepads[joystick->hwdata->index].hDevice;
-
-		// Reinitialize rumble motors to zero
-		ZeroMemory(&joystick->hwdata->pGamepad.Feedback, sizeof(XINPUT_FEEDBACK));
-		joystick->hwdata->pGamepad.Feedback.Header.dwStatus = ERROR_IO_PENDING;
-		joystick->hwdata->pGamepad.Feedback.Rumble.wLeftMotorSpeed = 0;
-		joystick->hwdata->pGamepad.Feedback.Rumble.wRightMotorSpeed = 0;
-
-		if (XInputSetState(joystick->hwdata->pGamepad.hDevice, &joystick->hwdata->pGamepad.Feedback) != ERROR_IO_PENDING) {
-			SDL_Log("XBOX_JoystickOpen: Failed to initialize rumble motors for gamepad %d\n", joystick->hwdata->index);
-		}
-		else {
-			SDL_Log("XBOX_JoystickOpen: Rumble motors initialized successfully for gamepad %d\n", joystick->hwdata->index);
-		}
-
-		return 0; // Skip opening the device again
-	}
-
-	// Check if device exists
-	if (dwDeviceMask & (1 << joystick->hwdata->index)) {
-		joystick->hwdata->pGamepad.hDevice = XInputOpen(XDEVICE_TYPE_GAMEPAD, joystick->hwdata->index,
-			XDEVICE_NO_SLOT, &g_PollingParameters);
-
-		if (joystick->hwdata->pGamepad.hDevice) {
-			SDL_Log("XInputOpen succeeded for device %d\n", joystick->hwdata->index);
-
-			// Save the device handle to the global array
-			g_Gamepads[joystick->hwdata->index].hDevice = joystick->hwdata->pGamepad.hDevice;
-
-			// Retrieve capabilities
-			if (XInputGetCapabilities(joystick->hwdata->pGamepad.hDevice, &joystick->hwdata->pGamepad.caps) == ERROR_SUCCESS) {
-				SDL_Log("XBOX_JoystickOpen: Device capabilities retrieved successfully.\n");
-			}
-			else {
-				SDL_Log("XBOX_JoystickOpen: Failed to retrieve device capabilities.\n");
-				XInputClose(joystick->hwdata->pGamepad.hDevice);
-				joystick->hwdata->pGamepad.hDevice = NULL;
-				return -1;
-			}
-
-			// Initialize rumble motors to zero
-			ZeroMemory(&joystick->hwdata->pGamepad.Feedback, sizeof(XINPUT_FEEDBACK));
-			joystick->hwdata->pGamepad.Feedback.Header.dwStatus = ERROR_IO_PENDING;
-			joystick->hwdata->pGamepad.Feedback.Rumble.wLeftMotorSpeed = 0;
-			joystick->hwdata->pGamepad.Feedback.Rumble.wRightMotorSpeed = 0;
-
-			if (XInputSetState(joystick->hwdata->pGamepad.hDevice, &joystick->hwdata->pGamepad.Feedback) != ERROR_IO_PENDING) {
-				SDL_Log("XBOX_JoystickOpen: Failed to initialize rumble motors for gamepad %d\n", joystick->hwdata->index);
-			}
-			else {
-				SDL_Log("XBOX_JoystickOpen: Rumble motors initialized successfully for gamepad %d\n", joystick->hwdata->index);
-			}
-		}
-		else {
-			SDL_Log("XBOX_JoystickOpen: Failed to open gamepad device %d\n", joystick->hwdata->index);
-			return -1;
-		}
-	}
-	else {
-		SDL_Log("XBOX_JoystickOpen: Gamepad %d not found.\n", joystick->hwdata->index);
+	// Attempt to open the device
+	joystick->hwdata->pGamepad.hDevice = XInputOpen(XDEVICE_TYPE_GAMEPAD, device_index, XDEVICE_NO_SLOT, &g_PollingParameters);
+	if (!joystick->hwdata->pGamepad.hDevice) {
+		SDL_Log("XBOX_JoystickOpen: Failed to open Controller %d.\n", device_index + 1);
+		free(joystick->hwdata);
+		joystick->hwdata = NULL;
 		return -1;
 	}
 
-	SDL_Log("XBOX_JoystickOpen: Gamepad %d opened successfully.\n", joystick->hwdata->index);
+	SDL_Log("XBOX_JoystickOpen: Controller %d successfully opened.\n", device_index + 1);
+
+	// Retrieve device capabilities
+	if (XInputGetCapabilities(joystick->hwdata->pGamepad.hDevice, &joystick->hwdata->pGamepad.caps) != ERROR_SUCCESS) {
+		SDL_Log("XBOX_JoystickOpen: Failed to retrieve capabilities for Controller %d.\n", device_index + 1);
+		XInputClose(joystick->hwdata->pGamepad.hDevice);
+		free(joystick->hwdata);
+		joystick->hwdata = NULL;
+		return -1;
+	}
+
+	SDL_Log("XBOX_JoystickOpen: Controller %d is ready for use.\n", device_index + 1);
+
+	// Mark device as open
+	g_DeviceOpen[device_index] = TRUE;
+
 	return 0;
 }
 
@@ -380,6 +386,7 @@ XBOX_JoystickUpdate(SDL_Joystick* joystick)
 	}
 
 	// Read the input state
+
 	XInputGetState(joystick->hwdata->pGamepad.hDevice, &g_InputStates[joystick->hwdata->index]);
 
 	// Copy gamepad to local structure
@@ -576,10 +583,31 @@ XBOX_JoystickUpdate(SDL_Joystick* joystick)
 static void
 XBOX_JoystickClose(SDL_Joystick* joystick)
 {
-	if (joystick->hwdata != NULL) {
-		/* free system specific hardware data */
-		free(joystick->hwdata);
+	if (!joystick || !joystick->hwdata) {
+		SDL_Log("XBOX_JoystickClose: Invalid joystick data.\n");
+		return;
 	}
+
+	int device_index = joystick->hwdata->index;
+
+	// Validate index
+	if (device_index < 0 || device_index >= 4) {
+		SDL_Log("XBOX_JoystickClose: Invalid device index %d.\n", device_index);
+		return;
+	}
+
+	// Close the device if open
+	if (g_DeviceOpen[device_index] && joystick->hwdata->pGamepad.hDevice) {
+		XInputClose(joystick->hwdata->pGamepad.hDevice);
+		SDL_Log("XBOX_JoystickClose: Device %d closed.\n", device_index);
+	}
+
+	// Free hardware data
+	free(joystick->hwdata);
+	joystick->hwdata = NULL;
+
+	// Update global state
+	g_DeviceOpen[device_index] = FALSE;
 }
 
 static void
