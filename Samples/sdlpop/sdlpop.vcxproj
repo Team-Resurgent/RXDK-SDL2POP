@@ -70,10 +70,10 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>XBOX;_XBOX;_DEBUG;_USE_XGMATH</PreprocessorDefinitions>
+      <PreprocessorDefinitions>XBOX;_XBOX;__XBOX__;_DEBUG;_USE_XGMATH</PreprocessorDefinitions>
       <ConformanceMode>false</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <AdditionalIncludeDirectories>..\..\include;SDLPoP\src;hacks;..\..\libSDL2x_image\include;.\printf</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\RXDK-SDL2x\libSDL2x\include;..\..\RXDK-SDL2x\libSDL2x_image\include;SDLPoP\src;hacks;.\printf</AdditionalIncludeDirectories>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <ExceptionHandling>Sync</ExceptionHandling>
       <AdditionalOptions>/arch:SSE %(AdditionalOptions)</AdditionalOptions>
@@ -97,7 +97,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>xboxkrnl.lib;xapilibd.lib;d3d8d.lib;d3dx8d.lib;dsoundd.lib;xkbd.lib;libsdl2x.lib;libcpmtd.lib;libcmtd.lib</AdditionalDependencies>
+      <AdditionalDependencies>xboxkrnl.lib;xapilibd.lib;d3d8d.lib;d3dx8d.lib;dsoundd.lib;xkbd.lib;libsdl2x.lib;libcpmtd.lib;libcmtd.lib;libSDL2x.lib;libSDL2x_image.lib</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
       <BaseAddress>
       </BaseAddress>
@@ -106,6 +106,7 @@
       <GenerateMapFile>true</GenerateMapFile>
       <FixedBaseAddress>false</FixedBaseAddress>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <AdditionalLibraryDirectories>..\..\RXDK-SDL2x\libs\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Message>Creating Xbox Image...</Message>
@@ -124,10 +125,10 @@ MKDIR "$(OutDir)XISO"
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>XBOX;_XBOX;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>XBOX;_XBOX;__XBOX__;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>false</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <AdditionalIncludeDirectories>..\..\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\RXDK-SDL2x\libSDL2x\include;..\..\RXDK-SDL2x\libSDL2x_image\include;..\sdlpop\printf;..\sdlpop\hacks;..\sdlpop\SDLPoP\src</AdditionalIncludeDirectories>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -140,7 +141,7 @@ MKDIR "$(OutDir)XISO"
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>xboxkrnl.lib;libcmt.lib;xapilib.lib;d3d8.lib;d3dx8.lib;dsound.lib;xkbd.lib;libsdl2x.lib</AdditionalDependencies>
+      <AdditionalDependencies>xboxkrnl.lib;libcmt.lib;xapilib.lib;d3d8.lib;d3dx8.lib;dsound.lib;xkbd.lib;libSDL2x.lib;libSDL2x_image.lib</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
       <BaseAddress>
       </BaseAddress>
@@ -149,6 +150,7 @@ MKDIR "$(OutDir)XISO"
       <GenerateMapFile>true</GenerateMapFile>
       <FixedBaseAddress>false</FixedBaseAddress>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <AdditionalLibraryDirectories>..\..\RXDK-SDL2x\libs\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Message>Creating Xbox Image...</Message>
@@ -203,14 +205,6 @@ MKDIR "$(OutDir)XISO"
     <ClInclude Include="SDLPoP\src\opl3.h" />
     <ClInclude Include="SDLPoP\src\proto.h" />
     <ClInclude Include="SDLPoP\src\types.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\libSDL2x.vcxproj">
-      <Project>{7c481c7d-eca7-4f9e-879c-105784f3543d}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\..\libSDL2x_image\libSDL2x_image.vcxproj">
-      <Project>{a9be8326-536f-42c4-8022-32f42d472de4}</Project>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

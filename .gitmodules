@@ -1,0 +1,3 @@
+[submodule "RXDK-SDL2x"]
+	path = RXDK-SDL2x
+	url = https://github.com/Team-Resurgent/RXDK-SDL2x.git
